@@ -24,7 +24,6 @@ This code generates an SMT-LIB problem to stdout which can then be passed to a s
 package main
 
 import (
-	"fmt"
 	"os"
 
 	. "github.com/cedws/smtlib-go"
@@ -32,27 +31,27 @@ import (
 
 func main() {
 	// Declare the variables
-	nodeA := &Variable{Name: "node_A"}
-	nodeB := &Variable{Name: "node_B"}
-	nodeC := &Variable{Name: "node_C"}
-	nodeD := &Variable{Name: "node_D"}
-	nodeE := &Variable{Name: "node_E"}
-	nodeF := &Variable{Name: "node_F"}
+	nodeA := Literal("node_A")
+	nodeB := Literal("node_B")
+	nodeC := Literal("node_C")
+	nodeD := Literal("node_D")
+	nodeE := Literal("node_E")
+	nodeF := Literal("node_F")
 
 	// Create the problem with initial capacity of 32
 	problem := make(Problem, 0, 32)
 
-	problem.Add(&DeclareFun{Name: "node_A", Type: "Bool"})
-	problem.Add(&DeclareFun{Name: "node_B", Type: "Bool"})
-	problem.Add(&DeclareFun{Name: "node_C", Type: "Bool"})
-	problem.Add(&DeclareFun{Name: "node_D", Type: "Bool"})
-	problem.Add(&DeclareFun{Name: "node_E", Type: "Bool"})
-	problem.Add(&DeclareFun{Name: "node_F", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_A", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_B", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_C", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_D", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_E", Type: "Bool"})
+	problem.Add(DeclareFun{Name: "node_F", Type: "Bool"})
 
 	// Add tree constraints
-	problem.Add(&Assert{Expression: &Implies{Antecedent: nodeD, Consequent: &Or{Left: nodeA, Right: nodeB}}})
-	problem.Add(&Assert{Expression: &Implies{Antecedent: nodeE, Consequent: &Or{Left: nodeB, Right: nodeC}}})
-	problem.Add(&Assert{Expression: &Implies{Antecedent: nodeF, Consequent: &Or{Left: nodeD, Right: nodeE}}})
+	problem.Add(Assert{Expression: Implies{Antecedent: nodeD, Consequent: Or{Left: nodeA, Right: nodeB}}})
+	problem.Add(Assert{Expression: Implies{Antecedent: nodeE, Consequent: Or{Left: nodeB, Right: nodeC}}})
+	problem.Add(Assert{Expression: Implies{Antecedent: nodeF, Consequent: Or{Left: nodeD, Right: nodeE}}})
 
 	nodeValues := map[string]int{
 		"node_A": 10,
@@ -66,14 +65,14 @@ func main() {
 	var maximiseTerms []Expression
 
 	for node, value := range nodeValues {
-		maximiseTerms = append(maximiseTerms, &Ite{
-			Condition: &Variable{Name: node},
-			TrueExpr:  &Variable{Name: fmt.Sprintf("%d", value)},
-			FalseExpr: &Variable{Name: "0"},
+		maximiseTerms = append(maximiseTerms, Ite{
+			Condition: Literal(node),
+			TrueExpr:  Literal(value),
+			FalseExpr: Literal(0),
 		})
 	}
 
-	problem.Add(&Maximize{
+	problem.Add(Maximize{
 		Objective: Sum(
 			maximiseTerms,
 		),
@@ -81,25 +80,30 @@ func main() {
 
 	// Initialise terms
 	iteTerms := []Expression{
-		&Ite{Condition: nodeA, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
-		&Ite{Condition: nodeB, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
-		&Ite{Condition: nodeC, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
-		&Ite{Condition: nodeD, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
-		&Ite{Condition: nodeE, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
-		&Ite{Condition: nodeF, TrueExpr: &Variable{Name: "1"}, FalseExpr: &Variable{Name: "0"}},
+		Ite{Condition: nodeA, TrueExpr: Literal(1), FalseExpr: Literal(0)},
+		Ite{Condition: nodeB, TrueExpr: Literal(1), FalseExpr: Literal(0)},
+		Ite{Condition: nodeC, TrueExpr: Literal(1), FalseExpr: Literal(0)},
+		Ite{Condition: nodeD, TrueExpr: Literal(1), FalseExpr: Literal(0)},
+		Ite{Condition: nodeE, TrueExpr: Literal(1), FalseExpr: Literal(0)},
+		Ite{Condition: nodeF, TrueExpr: Literal(1), FalseExpr: Literal(0)},
 	}
 
-	maxNodes := 4
+	// Generate best solutions up to 6 max nodes
+	for maxNodes := range 6 {
+		problem.Add(Push{})
 
-	problem.Add(&Assert{
-		Expression: &LessThanOrEqual{
-			Sum(iteTerms),
-			&Variable{Name: fmt.Sprint(maxNodes)},
-		},
-	})
+		problem.Add(Assert{
+			Expression: LessThanOrEqual{
+				Sum(iteTerms),
+				Literal(maxNodes + 1),
+			},
+		})
 
-	problem.Add(&CheckSat{})
-	problem.Add(&GetModel{})
+		problem.Add(CheckSat{})
+		problem.Add(GetModel{})
+
+		problem.Add(Pop{})
+	}
 
 	problem.WriteTo(os.Stdout)
 }

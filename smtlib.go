@@ -17,13 +17,15 @@ func (c Comment) String() string {
 	return fmt.Sprintf("; %s", c.Text)
 }
 
-// Variable is a boolean variable in SMT-LIB
-type Variable struct {
-	Name string
+// literal is a literal value in SMT-LIB
+type literal struct{ any }
+
+func Literal(v any) Expression {
+	return literal{v}
 }
 
-func (v Variable) String() string {
-	return v.Name
+func (l literal) String() string {
+	return fmt.Sprintf("%v", l.any)
 }
 
 // DeclareConst represents the declare-const statement in SMT-LIB
@@ -208,6 +210,20 @@ type Exit struct{}
 
 func (e Exit) String() string {
 	return "(exit)"
+}
+
+// Push represents the push statement in SMT-LIB
+type Push struct{}
+
+func (p Push) String() string {
+	return "(push)"
+}
+
+// Pop represents the pop statement in SMT-LIB
+type Pop struct{}
+
+func (p Pop) String() string {
+	return "(pop)"
 }
 
 // Problem represents a simple solver that can handle SMT-LIB generation

@@ -157,7 +157,7 @@ type Maximize struct {
 	Objective Expression
 }
 
-func (m *Maximize) String() string {
+func (m Maximize) String() string {
 	return fmt.Sprintf("(maximize %s)", m.Objective.String())
 }
 
@@ -167,7 +167,7 @@ type DeclareFun struct {
 	Type string
 }
 
-func (df *DeclareFun) String() string {
+func (df DeclareFun) String() string {
 	return fmt.Sprintf("(declare-fun %s () %s)", df.Name, df.Type)
 }
 
@@ -176,21 +176,21 @@ type Assert struct {
 	Expression Expression
 }
 
-func (a *Assert) String() string {
+func (a Assert) String() string {
 	return fmt.Sprintf("(assert %s)", a.Expression.String())
 }
 
 // CheckSat represents the check-sat statement in SMT-LIB
 type CheckSat struct{}
 
-func (cs *CheckSat) String() string {
+func (cs CheckSat) String() string {
 	return "(check-sat)"
 }
 
 // GetModel represents the get-model statement in SMT-LIB
 type GetModel struct{}
 
-func (gm *GetModel) String() string {
+func (gm GetModel) String() string {
 	return "(get-model)"
 }
 
@@ -206,7 +206,7 @@ func (gv GetValue) String() string {
 // Exit represents the exit statement in SMT-LIB
 type Exit struct{}
 
-func (e *Exit) String() string {
+func (e Exit) String() string {
 	return "(exit)"
 }
 

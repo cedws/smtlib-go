@@ -8,24 +8,75 @@ import (
 	"strings"
 )
 
+var (
+	_ Expression = Comment{}
+	_ Expression = literal{}
+	_ Expression = DeclareConst{}
+	_ Expression = SetLogic{}
+	_ Expression = SetOption{}
+	_ Expression = And{}
+	_ Expression = Or{}
+	_ Expression = Not{}
+	_ Expression = Implies{}
+	_ Expression = Ite{}
+	_ Expression = Sum{}
+	_ Expression = LessThanOrEqual{}
+	_ Expression = GreaterThanOrEqual{}
+	_ Expression = Maximize{}
+	_ Expression = DeclareFun{}
+	_ Expression = Assert{}
+	_ Expression = CheckSat{}
+	_ Expression = GetModel{}
+	_ Expression = GetValue{}
+	_ Expression = Exit{}
+	_ Expression = Push{}
+	_ Expression = Pop{}
+)
+
+func indent(s string, n int) string {
+	indent := strings.Repeat(" ", n)
+	return indent + s
+}
+
+func maybeIndent(e Expression, n int) string {
+	if _, ok := e.(literal); ok {
+		return e.String()
+	}
+	return e.StringIndent(n)
+}
+
+// Expression is a general interface for SMT-LIB expressions
+type Expression interface {
+	StringIndent(int) string
+	String() string
+}
+
+type literal struct{ any }
+
+// Literal is a literal value in SMT-LIB
+func Literal(v any) Expression {
+	return literal{v}
+}
+
+func (l literal) StringIndent(n int) string {
+	return indent(fmt.Sprintf("%v", l.any), n)
+}
+
+func (l literal) String() string {
+	return l.StringIndent(0)
+}
+
 // Comment represents a comment in SMT-LIB
 type Comment struct {
 	Text string
 }
 
+func (c Comment) StringIndent(n int) string {
+	return indent(fmt.Sprintf("; %s", c.Text), n)
+}
+
 func (c Comment) String() string {
-	return fmt.Sprintf("; %s", c.Text)
-}
-
-// literal is a literal value in SMT-LIB
-type literal struct{ any }
-
-func Literal(v any) Expression {
-	return literal{v}
-}
-
-func (l literal) String() string {
-	return fmt.Sprintf("%v", l.any)
+	return c.StringIndent(0)
 }
 
 // DeclareConst represents the declare-const statement in SMT-LIB
@@ -34,8 +85,16 @@ type DeclareConst struct {
 	Type string
 }
 
+func (dc DeclareConst) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(declare-const %s %s)",
+		dc.Name,
+		dc.Type,
+	), n)
+}
+
 func (dc DeclareConst) String() string {
-	return fmt.Sprintf("(declare-const %s %s)", dc.Name, dc.Type)
+	return dc.StringIndent(0)
 }
 
 // SetLogic represents the set-logic statement in SMT-LIB
@@ -43,8 +102,15 @@ type SetLogic struct {
 	Logic string
 }
 
+func (sl SetLogic) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(set-logic %s)",
+		sl.Logic,
+	), n)
+}
+
 func (sl SetLogic) String() string {
-	return fmt.Sprintf("(set-logic %s)", sl.Logic)
+	return sl.StringIndent(0)
 }
 
 // SetOption represents the set-option statement in SMT-LIB
@@ -53,13 +119,16 @@ type SetOption struct {
 	Value string
 }
 
-func (so SetOption) String() string {
-	return fmt.Sprintf("(set-option :%s %s)", so.Key, so.Value)
+func (so SetOption) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(set-option :%s %s)",
+		so.Key,
+		so.Value,
+	), n)
 }
 
-// Expression is a general interface for SMT-LIB expressions
-type Expression interface {
-	String() string
+func (so SetOption) String() string {
+	return so.StringIndent(0)
 }
 
 // And represents a logical AND operation
@@ -68,8 +137,16 @@ type And struct {
 	Right Expression
 }
 
+func (a And) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(and %s %s)",
+		maybeIndent(a.Left, n+2),
+		maybeIndent(a.Right, n+2),
+	), n)
+}
+
 func (a And) String() string {
-	return fmt.Sprintf("(and %s %s)", a.Left.String(), a.Right.String())
+	return a.StringIndent(0)
 }
 
 // Or represents a logical OR operation
@@ -78,8 +155,16 @@ type Or struct {
 	Right Expression
 }
 
+func (o Or) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(or %s %s)",
+		maybeIndent(o.Left, n+2),
+		maybeIndent(o.Right, n+2),
+	), n)
+}
+
 func (o Or) String() string {
-	return fmt.Sprintf("(or %s %s)", o.Left.String(), o.Right.String())
+	return o.StringIndent(0)
 }
 
 // Not represents a logical NOT operation
@@ -87,8 +172,15 @@ type Not struct {
 	Operand Expression
 }
 
-func (n Not) String() string {
-	return fmt.Sprintf("(not %s)", n.Operand.String())
+func (no Not) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(not %s)",
+		maybeIndent(no.Operand, n+2),
+	), n)
+}
+
+func (no Not) String() string {
+	return no.StringIndent(0)
 }
 
 // Implies represents a logical implication (=>)
@@ -97,8 +189,16 @@ type Implies struct {
 	Consequent Expression
 }
 
+func (i Implies) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(=> %s %s)",
+		maybeIndent(i.Antecedent, n+2),
+		maybeIndent(i.Consequent, n+2),
+	), n)
+}
+
 func (i Implies) String() string {
-	return fmt.Sprintf("(=> %s %s)", i.Antecedent.String(), i.Consequent.String())
+	return i.StringIndent(0)
 }
 
 // Ite represents an if-then-else expression
@@ -108,50 +208,88 @@ type Ite struct {
 	FalseExpr Expression
 }
 
+func (i Ite) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(ite %s %s %s)",
+		maybeIndent(i.Condition, n+2),
+		maybeIndent(i.TrueExpr, n+2),
+		maybeIndent(i.FalseExpr, n+2),
+	), n)
+}
+
 func (i Ite) String() string {
-	return fmt.Sprintf("(ite %s %s %s)", i.Condition.String(), i.TrueExpr.String(), i.FalseExpr.String())
+	return i.StringIndent(0)
 }
 
 // Sum represents a sum of expressions
 type Sum []Expression
 
-func (s Sum) String() string {
-	terms := []string{}
-	for _, term := range s {
+func (s Sum) StringIndent(n int) string {
+	var terms []string
+
+	if len(s) == 0 || s[0] == nil {
+		return "(+)"
+	}
+
+	terms = append(terms, maybeIndent(s[0], 0))
+
+	for _, term := range s[1:] {
 		if term == nil {
 			continue
 		}
-		terms = append(terms, "\n  "+term.String())
+		terms = append(terms, maybeIndent(term, n+2))
 	}
-	return fmt.Sprintf("(+ %s)", strings.Join(terms, " "))
+
+	join := "\n" + strings.Repeat(" ", n)
+
+	return indent(fmt.Sprintf(
+		"(+ %s)",
+		strings.Join(terms, join),
+	), n)
+}
+
+func (s Sum) String() string {
+	return s.StringIndent(0)
 }
 
 // LessThanOrEqual represents the <= expression
 type LessThanOrEqual [2]Expression
 
+func (lte LessThanOrEqual) StringIndent(n int) string {
+	var terms []string
+
+	terms = append(terms, maybeIndent(lte[0], 0))
+	terms = append(terms, maybeIndent(lte[1], 0))
+
+	join := " "
+	return indent(fmt.Sprintf(
+		"(<= %s)",
+		strings.Join(terms, join),
+	), n)
+}
+
 func (lte LessThanOrEqual) String() string {
-	terms := []string{}
-	for _, term := range lte {
-		if term == nil {
-			continue
-		}
-		terms = append(terms, "\n  "+term.String())
-	}
-	return fmt.Sprintf("(<= %s)", strings.Join(terms, " "))
+	return lte.StringIndent(0)
 }
 
 // GreaterThanOrEqual represents the <= expression
 type GreaterThanOrEqual [2]Expression
 
+func (gte GreaterThanOrEqual) StringIndent(n int) string {
+	var terms []string
+
+	terms = append(terms, maybeIndent(gte[0], 0))
+	terms = append(terms, maybeIndent(gte[1], 0))
+
+	join := " "
+	return indent(fmt.Sprintf(
+		"(>= %s)",
+		strings.Join(terms, join),
+	), n)
+}
+
 func (gte GreaterThanOrEqual) String() string {
-	terms := []string{}
-	for _, term := range gte {
-		if term == nil {
-			continue
-		}
-		terms = append(terms, "\n  "+term.String())
-	}
-	return fmt.Sprintf("(>= %s)", strings.Join(terms, " "))
+	return gte.StringIndent(0)
 }
 
 // Maximize represents the maximize objective
@@ -159,18 +297,35 @@ type Maximize struct {
 	Objective Expression
 }
 
+func (m Maximize) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(maximize %s)",
+		maybeIndent(m.Objective, n+2),
+	), n)
+}
+
 func (m Maximize) String() string {
-	return fmt.Sprintf("(maximize %s)", m.Objective.String())
+	return m.StringIndent(0)
 }
 
 // DeclareFun represents the declare-fun statement in SMT-LIB
 type DeclareFun struct {
 	Name string
+	Sort string
 	Type string
 }
 
+func (df DeclareFun) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(declare-fun %s (%s) %s)",
+		df.Name,
+		df.Sort,
+		df.Type,
+	), n)
+}
+
 func (df DeclareFun) String() string {
-	return fmt.Sprintf("(declare-fun %s () %s)", df.Name, df.Type)
+	return df.StringIndent(0)
 }
 
 // Assert represents an assert statement in SMT-LIB
@@ -178,22 +333,37 @@ type Assert struct {
 	Expression Expression
 }
 
+func (a Assert) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(assert %s)",
+		maybeIndent(a.Expression, 0),
+	), n)
+}
+
 func (a Assert) String() string {
-	return fmt.Sprintf("(assert %s)", a.Expression.String())
+	return a.StringIndent(0)
 }
 
 // CheckSat represents the check-sat statement in SMT-LIB
 type CheckSat struct{}
 
+func (cs CheckSat) StringIndent(n int) string {
+	return indent("(check-sat)", n)
+}
+
 func (cs CheckSat) String() string {
-	return "(check-sat)"
+	return cs.StringIndent(0)
 }
 
 // GetModel represents the get-model statement in SMT-LIB
 type GetModel struct{}
 
+func (gm GetModel) StringIndent(n int) string {
+	return indent("(get-model)", n)
+}
+
 func (gm GetModel) String() string {
-	return "(get-model)"
+	return gm.StringIndent(0)
 }
 
 // GetValue represents the get-value statement in SMT-LIB
@@ -201,29 +371,48 @@ type GetValue struct {
 	Expression Expression
 }
 
+func (gv GetValue) StringIndent(n int) string {
+	return indent(fmt.Sprintf(
+		"(get-value %s)",
+		maybeIndent(gv.Expression, n+2),
+	), n)
+}
+
 func (gv GetValue) String() string {
-	return fmt.Sprintf("(get-value %s)", gv.Expression.String())
+	return gv.StringIndent(0)
 }
 
 // Exit represents the exit statement in SMT-LIB
 type Exit struct{}
 
+func (e Exit) StringIndent(n int) string {
+	return indent("(exit)", n)
+}
+
 func (e Exit) String() string {
-	return "(exit)"
+	return e.StringIndent(0)
 }
 
 // Push represents the push statement in SMT-LIB
 type Push struct{}
 
+func (p Push) StringIndent(n int) string {
+	return indent("(push)", n)
+}
+
 func (p Push) String() string {
-	return "(push)"
+	return p.StringIndent(0)
 }
 
 // Pop represents the pop statement in SMT-LIB
 type Pop struct{}
 
+func (p Pop) StringIndent(n int) string {
+	return indent("(pop)", n)
+}
+
 func (p Pop) String() string {
-	return "(pop)"
+	return p.StringIndent(0)
 }
 
 // Problem represents a simple solver that can handle SMT-LIB generation
@@ -242,11 +431,13 @@ func (p Problem) WriteTo(w io.Writer) (int64, error) {
 		if expr == nil {
 			continue
 		}
+
 		n, err := bytes.WriteString(expr.String() + "\n")
-		if err != nil {
-			return int64(n), err
-		}
 		total += int64(n)
+
+		if err != nil {
+			return total, err
+		}
 	}
 
 	return total, bytes.Flush()

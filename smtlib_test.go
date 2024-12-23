@@ -128,6 +128,32 @@ func TestSum(t *testing.T) {
 	})
 }
 
+func TestLessThan(t *testing.T) {
+	s := LessThan{
+		Literal(1),
+		Literal(2),
+	}
+	assert.Equal(
+		t,
+		readTestData("testdata/lessthan.smt2"),
+		s.StringIndent(0),
+		"expected strings to match",
+	)
+}
+
+func TestGreaterThan(t *testing.T) {
+	s := GreaterThan{
+		Literal(1),
+		Literal(2),
+	}
+	assert.Equal(
+		t,
+		readTestData("testdata/greaterthan.smt2"),
+		s.StringIndent(0),
+		"expected strings to match",
+	)
+}
+
 func TestLessThanOrEqual(t *testing.T) {
 	s := LessThanOrEqual{
 		Literal(1),

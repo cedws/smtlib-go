@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	_ Expression = Comment{}
 	_ Expression = literal{}
+	_ Expression = Comment{}
 	_ Expression = DeclareConst{}
 	_ Expression = SetLogic{}
 	_ Expression = SetOption{}
@@ -20,6 +20,8 @@ var (
 	_ Expression = Implies{}
 	_ Expression = Ite{}
 	_ Expression = Sum{}
+	_ Expression = LessThan{}
+	_ Expression = GreaterThan{}
 	_ Expression = LessThanOrEqual{}
 	_ Expression = GreaterThanOrEqual{}
 	_ Expression = Maximize{}
@@ -140,7 +142,7 @@ type And struct {
 func (a And) StringIndent(n int) string {
 	return indent(fmt.Sprintf(
 		"(and %s %s)",
-		maybeIndent(a.Left, n+2),
+		maybeIndent(a.Left, n),
 		maybeIndent(a.Right, n+2),
 	), n)
 }
@@ -252,14 +254,54 @@ func (s Sum) String() string {
 	return s.StringIndent(0)
 }
 
+// LessThan represents the < expression
+type LessThan [2]Expression
+
+func (lt LessThan) StringIndent(n int) string {
+	var terms []string
+
+	terms = append(terms, lt[0].String())
+	terms = append(terms, lt[1].String())
+
+	join := " "
+	return indent(fmt.Sprintf(
+		"(< %s)",
+		strings.Join(terms, join),
+	), n)
+}
+
+func (lt LessThan) String() string {
+	return lt.StringIndent(0)
+}
+
+// GreaterThan represents the > expression
+type GreaterThan [2]Expression
+
+func (gt GreaterThan) StringIndent(n int) string {
+	var terms []string
+
+	terms = append(terms, gt[0].String())
+	terms = append(terms, gt[1].String())
+
+	join := " "
+	return indent(fmt.Sprintf(
+		"(> %s)",
+		strings.Join(terms, join),
+	), n)
+}
+
+func (gt GreaterThan) String() string {
+	return gt.StringIndent(0)
+}
+
 // LessThanOrEqual represents the <= expression
 type LessThanOrEqual [2]Expression
 
 func (lte LessThanOrEqual) StringIndent(n int) string {
 	var terms []string
 
-	terms = append(terms, maybeIndent(lte[0], 0))
-	terms = append(terms, maybeIndent(lte[1], 0))
+	terms = append(terms, lte[0].String())
+	terms = append(terms, lte[1].String())
 
 	join := " "
 	return indent(fmt.Sprintf(
@@ -272,14 +314,14 @@ func (lte LessThanOrEqual) String() string {
 	return lte.StringIndent(0)
 }
 
-// GreaterThanOrEqual represents the <= expression
+// GreaterThanOrEqual represents the >= expression
 type GreaterThanOrEqual [2]Expression
 
 func (gte GreaterThanOrEqual) StringIndent(n int) string {
 	var terms []string
 
-	terms = append(terms, maybeIndent(gte[0], 0))
-	terms = append(terms, maybeIndent(gte[1], 0))
+	terms = append(terms, gte[0].String())
+	terms = append(terms, gte[1].String())
 
 	join := " "
 	return indent(fmt.Sprintf(

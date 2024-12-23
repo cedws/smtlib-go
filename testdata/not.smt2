@@ -1,0 +1,1 @@
+(not node_A)

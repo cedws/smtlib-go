@@ -1,0 +1,1 @@
+(assert node_A)
